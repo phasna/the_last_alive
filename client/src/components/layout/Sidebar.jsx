@@ -1,18 +1,46 @@
+import { PlayerAvatar } from "../PlayerAvatar";
+
 const NAV = [
   { id: "mission", label: "MISSION LOG", icon: "▸" },
   { id: "survivors", label: "SURVIVORS", icon: "◉" },
   { id: "settings", label: "SETTINGS", icon: "⚙" },
 ];
 
-export function Sidebar({ username, level = 12, rank = 1200, activeNav = "survivors" }) {
+export function Sidebar({
+  username,
+  avatarId = "skull",
+  eliminated = false,
+  level = 12,
+  rank = 1200,
+  activeNav = "survivors",
+}) {
   return (
     <aside className="w-56 shrink-0 border-r border-[#1a2a1a] bg-[rgba(8,8,10,0.95)] flex flex-col h-full backdrop-blur-sm">
       <div className="p-4 border-b border-[#1a2a1a]">
-        <div className="relative w-16 h-16 border border-[#39ff14] bg-[#0a140a] flex items-center justify-center text-2xl mb-3 neon-box">
-          <span className="relative z-10">☠</span>
-          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#39ff14] border border-[#050506]" title="En ligne" />
+        <div className="relative inline-block mb-3">
+          <PlayerAvatar
+            avatarId={avatarId}
+            size="md"
+            highlight={!eliminated}
+            eliminated={eliminated}
+          />
+          <div
+            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border border-[#050506] ${
+              eliminated ? "bg-[#ff2a2a]" : "bg-[#39ff14]"
+            }`}
+            title={eliminated ? "Éliminé" : "En ligne"}
+          />
         </div>
-        <p className="font-display text-sm neon-text truncate">{username}</p>
+        <p
+          className={`font-display text-sm truncate ${
+            eliminated ? "text-[#ff2a2a]" : "neon-text"
+          }`}
+        >
+          {username}
+        </p>
+        {eliminated && (
+          <p className="text-[9px] text-[#ff2a2a] tracking-widest mt-1">ÉLIMINÉ</p>
+        )}
         <p className="text-[10px] text-[#5a6a5a] mt-1 tracking-wider">
           LVL {level} · RANK {rank.toLocaleString()}
         </p>

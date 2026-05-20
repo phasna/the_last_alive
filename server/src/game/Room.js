@@ -39,8 +39,11 @@ export class Room {
     this.createdAt = Date.now();
     this.activeEvent = null;
     this.lastRoundRecap = [];
+    this.trappedThisRound = [];
     this.combatFeed = [];
     this.fakeAnswers = new Map();
+    this.usedFakePrompts = new Set();
+    this._voteOptionMeta = null;
     this._broadcast = null;
   }
 
@@ -55,12 +58,14 @@ export class Room {
     const player = {
       id: socketId,
       username: username || `OPERATOR_${this.players.size + 1}`,
-      avatar: avatar || "default",
+      avatar: avatar || "skull",
       lives: INITIAL_LIVES,
       ready: false,
       eliminated: false,
       kills: 0,
       streak: 0,
+      points: 0,
+      fakeTrapUsed: false,
       joinedAt: Date.now(),
       survivedMs: 0,
     };
@@ -97,6 +102,30 @@ export class Room {
 
   getAliveCount() {
     return this.getAlivePlayers().length;
+  }
+
+  addPoints(socketId, amount) {
+    const p = this.players.get(socketId);
+    if (p && !p.eliminated) p.points = (p.points || 0) + amount;
+  }
+
+  /** Joueurs avec plus de points que le minimum (ou ex-aequo leader) — piège 1× / partie */
+  getEligibleFakeTrappers() {
+    const alive = this.getAlivePlayers().filter((p) => !p.fakeTrapUsed);
+    if (alive.length === 0) return [];
+
+    const minPts = Math.min(...alive.map((p) => p.points ?? 0));
+    const leaders = alive.filter((p) => (p.points ?? 0) > minPts);
+
+    if (leaders.length > 0) return leaders;
+
+    const sorted = [...alive].sort(
+      (a, b) =>
+        (b.points ?? 0) - (a.points ?? 0) ||
+        b.kills - a.kills ||
+        b.lives - a.lives
+    );
+    return [sorted[0]];
   }
 
   pushFeed(entry) {
@@ -168,6 +197,11 @@ export class Room {
     timerSec = applyEventToTimer(timerSec, this.activeEvent);
 
     if (this.currentMinigame === "fake_answer") {
+      const eligible = this.getEligibleFakeTrappers();
+      if (eligible.length === 0) {
+        this.beginFakeVotePhase(broadcast);
+        return;
+      }
       timerSec = FAKE_SUBMIT_SEC;
     }
 
@@ -190,16 +224,26 @@ export class Room {
     }
 
     if (type === "fake_answer") {
-      const prompt =
-        FAKE_ANSWER_PROMPTS[
-          Math.floor(Math.random() * FAKE_ANSWER_PROMPTS.length)
-        ];
+      let prompt = FAKE_ANSWER_PROMPTS.find((p) => !this.usedFakePrompts.has(p.id));
+      if (!prompt) {
+        this.usedFakePrompts.clear();
+        prompt =
+          FAKE_ANSWER_PROMPTS[
+            Math.floor(Math.random() * FAKE_ANSWER_PROMPTS.length)
+          ];
+      }
+      this.usedFakePrompts.add(prompt.id);
+      const eligible = this.getEligibleFakeTrappers();
+
       return {
         type,
         subPhase: "submit_fake",
         question: prompt.question,
         correctAnswer: prompt.correctAnswer,
-        hint: "Invente une FAUSSE réponse pour piéger les autres.",
+        hint:
+          "Seuls les opérateurs en tête au SCORE peuvent poser 1 piège (une fois par partie).",
+        eligibleTrapIds: eligible.map((p) => p.id),
+        eligibleTrapNames: eligible.map((p) => p.username),
       };
     }
 
@@ -223,27 +267,26 @@ export class Room {
 
   beginFakeVotePhase(broadcast) {
     const payload = this.roundPayload;
-    const alive = this.getAlivePlayers();
-    const fakes = [];
+    const correctText = payload.correctAnswer;
+    const traps = [];
 
-    for (const p of alive) {
-      const text = String(this.fakeAnswers.get(p.id) ?? "").trim();
-      if (text && text.length > 0) {
-        fakes.push({ text: text.slice(0, 40), authorId: p.id });
-      }
+    for (const [authorId, text] of this.fakeAnswers.entries()) {
+      const trimmed = String(text).trim().slice(0, 40);
+      if (trimmed) traps.push({ text: trimmed, isCorrect: false, authorId });
     }
 
-    const decoys = ["NEPTUNE", "1923", "BAMBOU", "ANTARCTIQUE", "PLATINE"];
-    while (fakes.length < Math.min(3, alive.length)) {
-      fakes.push({
+    const decoys = ["NEPTUNE", "1923", "BAMBOU", "ANTARCTIQUE", "PLATINE", "VENUS"];
+    while (traps.length < 2) {
+      traps.push({
         text: decoys[Math.floor(Math.random() * decoys.length)],
+        isCorrect: false,
         authorId: null,
       });
     }
 
     const options = [
-      { text: payload.correctAnswer, isCorrect: true, authorId: null },
-      ...fakes.map((f) => ({ text: f.text, isCorrect: false, authorId: f.authorId })),
+      { text: correctText, isCorrect: true, authorId: null },
+      ...traps,
     ];
 
     for (let i = options.length - 1; i > 0; i--) {
@@ -251,19 +294,21 @@ export class Room {
       [options[i], options[j]] = [options[j], options[i]];
     }
 
-    const correctIndex = options.findIndex((o) => o.isCorrect);
+    this._voteOptionMeta = options;
 
     this.roundPayload = {
       type: "fake_answer",
       subPhase: "vote",
       question: payload.question,
       options: options.map((o) => o.text),
-      correctIndex,
-      trapAuthors: options.filter((o) => o.authorId).map((o) => o.authorId),
+      trapLabels: options.map((o) =>
+        o.authorId ? `Piège de ${this.players.get(o.authorId)?.username}` : null
+      ),
+      hint: "Une seule réponse est vraie. Les autres sont des pièges.",
     };
     this.roundAnswers.clear();
 
-    let timerSec = applyEventToTimer(FAKE_VOTE_SEC, this.activeEvent);
+    const timerSec = applyEventToTimer(FAKE_VOTE_SEC, this.activeEvent);
     this.scheduleRoundEnd(broadcast, timerSec);
     broadcast(this);
   }
@@ -278,15 +323,26 @@ export class Room {
     const payload = this.roundPayload;
 
     if (type === "fake_answer" && payload?.subPhase === "submit_fake") {
+      const eligible = this.getEligibleFakeTrappers();
+      if (!eligible.some((p) => p.id === socketId)) {
+        return {
+          error: "Pas assez de points ou piège déjà utilisé cette partie",
+        };
+      }
       if (this.fakeAnswers.has(socketId)) {
-        return { error: "Already submitted" };
+        return { error: "Piège déjà envoyé" };
       }
       const text = String(answer ?? "").trim().slice(0, 40);
       if (!text) return { error: "Réponse vide" };
-      this.fakeAnswers.set(socketId, text);
+      if (text.toUpperCase() === payload.correctAnswer?.toUpperCase()) {
+        return { error: "Le piège doit être FAUX — pas la vraie réponse" };
+      }
 
-      const alive = this.getAlivePlayers();
-      if (this.fakeAnswers.size >= alive.length) {
+      this.fakeAnswers.set(socketId, text);
+      player.fakeTrapUsed = true;
+
+      const eligibleCount = eligible.length;
+      if (this.fakeAnswers.size >= eligibleCount) {
         this.clearRoundTimer();
         this.beginFakeVotePhase(this._broadcast);
         return { ok: true, phaseChange: true };
@@ -317,6 +373,7 @@ export class Room {
     const alive = this.getAlivePlayers();
     const dmgMult = getDamageMultiplier(this.activeEvent);
     this.lastRoundRecap = [];
+    this.trappedThisRound = [];
 
     const hurt = (playerId, amount, reason) => {
       const before = this.players.get(playerId)?.lives ?? 0;
@@ -343,17 +400,44 @@ export class Room {
         if (!correct) hurt(p.id, 1 * dmgMult, "Mauvaise séquence");
       }
     } else if (type === "fake_answer" && payload.subPhase === "vote") {
-      const correctIndex = payload.correctIndex;
+      const meta = this._voteOptionMeta || [];
       for (const p of alive) {
         const ans = this.roundAnswers.get(p.id);
         const idx = ans?.answer;
-        const pickedTrap = payload.trapAuthors?.includes(p.id) && idx !== correctIndex;
-        const wrong = !ans || idx !== correctIndex || pickedTrap;
-        if (wrong) {
-          const dmg = (type === "sudden_death" ? p.lives : 1) * dmgMult;
-          hurt(p.id, dmg, pickedTrap ? "Piégé par une fausse réponse" : "Mauvais choix");
+        const choice = meta[idx];
+
+        if (!ans || idx === undefined || !choice) {
+          hurt(p.id, 1 * dmgMult, "Pas répondu");
+          continue;
+        }
+
+        if (choice.authorId && choice.authorId !== p.id) {
+          const author = this.players.get(choice.authorId);
+          hurt(
+            p.id,
+            1 * dmgMult,
+            `Piégé par ${author?.username ?? "un adversaire"}`
+          );
+          const after = this.players.get(p.id);
+          this.trappedThisRound.push({
+            playerId: p.id,
+            username: p.username,
+            byUsername: author?.username ?? "???",
+            eliminated: after?.eliminated ?? false,
+          });
+          if (author && !author.eliminated) {
+            this.addPoints(choice.authorId, 25);
+            author.kills += 1;
+            this.pushFeed({
+              type: "trap",
+              message: `${p.username} est tombé dans le piège de ${author.username}`,
+            });
+          }
+        } else if (!choice.isCorrect) {
+          hurt(p.id, 1 * dmgMult, "Mauvais choix");
         } else {
           p.streak = (p.streak || 0) + 1;
+          this.addPoints(p.id, 15);
         }
       }
     } else if (type === "last_answer_loses") {
@@ -381,6 +465,7 @@ export class Room {
           hurt(p.id, dmg, !ans ? "Pas répondu" : "Mauvaise réponse");
         } else {
           p.streak = (p.streak || 0) + 1;
+          this.addPoints(p.id, 10);
         }
       }
     }
@@ -429,7 +514,7 @@ export class Room {
     p.streak = 0;
     if (p.lives <= 0) {
       p.eliminated = true;
-      p.survivedMs = Date.now() - this.createdAt;
+      if (!p.survivedMs) p.survivedMs = Date.now() - p.joinedAt;
       this.spectators.add(socketId);
       const killer = [...this.players.values()].find(
         (x) => x.id !== socketId && !x.eliminated
@@ -439,10 +524,17 @@ export class Room {
   }
 
   checkWinner() {
+    const now = Date.now();
+    for (const p of this.players.values()) {
+      if (!p.survivedMs && (p.eliminated || p.lives <= 0)) {
+        p.survivedMs = now - p.joinedAt;
+      }
+    }
+
     const alive = this.getAlivePlayers();
     if (alive.length === 1) {
       const w = alive[0];
-      w.survivedMs = Date.now() - this.createdAt;
+      w.survivedMs = now - w.joinedAt;
       this.winner = this.sanitizePlayer(w);
       this.phase = "game_over";
       this.pushFeed({ type: "victory", message: `${w.username} — LAST SURVIVOR` });
@@ -472,7 +564,9 @@ export class Room {
       winner: this.winner,
       answeredCount: this.roundAnswers.size,
       fakeSubmittedCount: this.fakeAnswers.size,
+      fakeTrapEligibleIds: this.getEligibleFakeTrappers().map((p) => p.id),
       lastRoundRecap: this.lastRoundRecap,
+      trappedThisRound: this.trappedThisRound,
       combatFeed: this.combatFeed,
     };
   }
@@ -484,6 +578,8 @@ export class Room {
       correctOrder,
       correctAnswer,
       trapAuthors,
+      eligibleTrapIds,
+      eligibleTrapNames,
       ...safe
     } = payload;
     return safe;
@@ -499,6 +595,8 @@ export class Room {
       eliminated: p.eliminated,
       kills: p.kills,
       streak: p.streak || 0,
+      points: p.points || 0,
+      fakeTrapUsed: p.fakeTrapUsed,
       survivedMs: p.survivedMs || 0,
     };
   }

@@ -3,6 +3,7 @@ import { Sidebar } from "../components/layout/Sidebar";
 import { TopBar } from "../components/layout/TopBar";
 import { EventBanner } from "../components/EventBanner";
 import { RoundRecap } from "../components/RoundRecap";
+import { SurvivorsList } from "../components/SurvivorsList";
 
 export function Selector({ gameState, selfId }) {
   const me = gameState.players.find((p) => p.id === selfId);
@@ -11,10 +12,21 @@ export function Selector({ gameState, selfId }) {
 
   return (
     <div className="h-full min-h-dvh flex grid-bg scanlines ambient-bg">
-      <Sidebar username={me?.username} activeNav="survivors" />
+      <Sidebar
+        username={me?.username}
+        avatarId={me?.avatar}
+        eliminated={me?.eliminated}
+        activeNav="survivors"
+      />
       <div className="flex-1 flex flex-col">
         <TopBar survivors={gameState.survivorsCount} lives={me?.lives} />
-        <main className="flex-1 flex flex-col items-center justify-center p-8">
+        <main className="flex-1 flex gap-4 p-4 sm:p-6 min-h-0 overflow-hidden">
+          <SurvivorsList
+            players={gameState.players}
+            selfId={selfId}
+            compact
+          />
+          <div className="flex-1 flex flex-col items-center justify-center min-w-0 overflow-y-auto">
           {isRecap ? (
             <>
               <motion.p
@@ -85,6 +97,7 @@ export function Selector({ gameState, selfId }) {
               </p>
             </>
           )}
+          </div>
         </main>
       </div>
     </div>

@@ -84,11 +84,15 @@ Le terminal affiche une adresse du type :
 ```
 ├── client/          # React + Vite + Tailwind + Framer Motion
 │   └── src/
-│       ├── screens/   # Home, Lobby, Selector, Gameplay, Winner
-│       ├── components/
-│       └── hooks/     # useSocket
-└── server/          # Node.js + Socket.io
-    └── src/game/    # Room, GameManager, mini-jeux
+└── server/          # Express + Socket.io
+    └── src/
+        ├── app.js           # App Express
+        ├── index.js         # Point d’entrée HTTP
+        ├── routes/          # Routes REST /api/*
+        ├── controllers/     # Logique HTTP
+        ├── socket/          # Événements temps réel
+        ├── services/        # GameManager partagé
+        └── game/            # Room, mini-jeux
 ```
 
 ## Variables d’environnement (optionnel)

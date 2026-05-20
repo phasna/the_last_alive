@@ -6,6 +6,7 @@ import { Lobby } from "./screens/Lobby";
 import { Selector } from "./screens/Selector";
 import { Gameplay } from "./screens/Gameplay";
 import { Winner } from "./screens/Winner";
+import { TrapAnnouncer } from "./components/TrapAnnouncer";
 
 export default function App() {
   const {
@@ -54,7 +55,8 @@ export default function App() {
     const feed = gameState?.combatFeed?.[0];
     if (!feed || feed.at === prevFeedRef.current) return;
     prevFeedRef.current = feed.at;
-    if (feed.type === "elimination") playSound("eliminate");
+    if (feed.type === "trap") playSound("eliminate");
+    else if (feed.type === "elimination") playSound("eliminate");
     else if (feed.type === "damage") playSound("damage");
   }, [gameState?.combatFeed, playSound]);
 
@@ -122,7 +124,15 @@ export default function App() {
   }
 
   if (phase === "selecting" || phase === "round_end") {
-    return <Selector gameState={gameState} selfId={selfId} />;
+    const myTrap = gameState.trappedThisRound?.find((t) => t.playerId === selfId);
+    return (
+      <>
+        <Selector gameState={gameState} selfId={selfId} />
+        {phase === "round_end" && myTrap && (
+          <TrapAnnouncer trap={myTrap} onSound={playSound} />
+        )}
+      </>
+    );
   }
 
   if (phase === "playing") {

@@ -5,6 +5,7 @@ export function TopBar({
   timer,
   survivors,
   lives,
+  points,
   subtitle,
 }) {
   return (
@@ -27,6 +28,14 @@ export function TopBar({
               <p className="text-[9px] text-[#5a6a5a] tracking-widest">SURVIVORS</p>
               <p className="neon-text font-display text-xl tabular-nums leading-none">
                 {survivors}
+              </p>
+            </div>
+          )}
+          {points !== undefined && (
+            <div className="text-right hidden sm:block">
+              <p className="text-[9px] text-[#5a6a5a] tracking-widest">SCORE</p>
+              <p className="text-[#ffaa00] font-display text-lg tabular-nums leading-none">
+                {points}
               </p>
             </div>
           )}

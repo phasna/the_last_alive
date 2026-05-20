@@ -1,88 +1,90 @@
-const AVATAR_COLORS = [
-  "#39ff14", "#ff4d8d", "#4d9fff", "#ffaa00", "#b44dff", "#00ffcc",
-];
+import { PlayerAvatar } from "./PlayerAvatar";
 
-function PixelAvatar({ name, index, isSelf, ready }) {
-  const color = AVATAR_COLORS[index % AVATAR_COLORS.length];
+const MAX_SLOTS = 16;
+
+function SlotCard({ player, isSelf }) {
+  const dead = player.eliminated || player.lives <= 0;
+
   return (
     <div
-      className={`flex flex-col items-center gap-1.5 p-2 border transition-colors ${
-        isSelf
-          ? "border-[#39ff14] bg-[rgba(57,255,20,0.08)]"
-          : "border-[#1a2a1a] bg-[#0a0a0c] hover:border-[#2a3a2a]"
+      className={`relative flex flex-col items-center justify-center p-2 min-h-[96px] border transition-all duration-200 ${
+        dead
+          ? "border-[#ff2a2a] bg-[rgba(255,42,42,0.1)] opacity-80"
+          : isSelf
+            ? "border-[#39ff14] bg-[rgba(57,255,20,0.08)]"
+            : "border-[#1a2a1a] bg-[rgba(10,10,12,0.6)] hover:border-[#2a4a2a]"
       }`}
     >
-      <div
-        className="w-12 h-12 grid grid-cols-4 grid-rows-4 gap-px"
-        style={{ imageRendering: "pixelated" }}
-      >
-        {Array.from({ length: 16 }).map((_, i) => (
-          <div
-            key={i}
-            className="w-full h-full"
-            style={{
-              backgroundColor:
-                (i + index) % 3 === 0 ? color : (i + index) % 5 === 0 ? "#111" : "transparent",
-            }}
-          />
-        ))}
-      </div>
-      <span className="text-[9px] tracking-wider truncate max-w-[72px]">{name}</span>
+      {isSelf && !dead && (
+        <span className="absolute top-1 right-1 text-[8px] text-[#39ff14] tracking-widest z-10">
+          YOU
+        </span>
+      )}
+      {dead && (
+        <span className="absolute top-1 right-1 text-[8px] text-[#ff2a2a] tracking-widest z-10">
+          OUT
+        </span>
+      )}
+      <PlayerAvatar
+        avatarId={player.avatar}
+        size="md"
+        highlight={isSelf && !dead}
+        eliminated={dead}
+      />
       <span
-        className={`text-[8px] tracking-widest ${
-          ready ? "text-[#39ff14]" : "text-[#5a6a5a]"
+        className={`font-display text-[10px] truncate max-w-full px-1 mt-1.5 ${
+          dead ? "text-[#ff2a2a] line-through decoration-[#ff2a2a]/60" : "text-[#c8e6c8]"
         }`}
       >
-        {ready ? "READY" : "…"}
+        {player.username}
+      </span>
+      <span
+        className={`text-[8px] tracking-widest ${
+          dead
+            ? "text-[#ff2a2a]"
+            : player.ready
+              ? "text-[#39ff14]"
+              : "text-[#ffaa00]"
+        }`}
+      >
+        {dead ? "✕ ÉLIMINÉ" : player.ready ? "● READY" : "○ WAIT"}
+      </span>
+    </div>
+  );
+}
+
+function EmptySlot({ index }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[96px] border border-dashed border-[#1a2a1a] bg-[rgba(5,5,6,0.5)] opacity-50">
+      <div className="w-14 h-14 border border-[#1a2a1a] flex items-center justify-center text-[#2a3a2a] text-xl">
+        +
+      </div>
+      <span className="text-[8px] text-[#3a4a3a] tracking-widest mt-2">
+        SLOT {String(index + 1).padStart(2, "0")}
       </span>
     </div>
   );
 }
 
 export function AvatarGrid({ players, selfId }) {
-  const others = players.filter((p) => p.id !== selfId);
   const self = players.find((p) => p.id === selfId);
+  const others = players.filter((p) => p.id !== selfId);
+  const ordered = self ? [self, ...others] : others;
+  const slots = Array.from({ length: MAX_SLOTS }, (_, i) => ordered[i] ?? null);
 
   return (
-    <div className="flex flex-col sm:flex-row gap-6 items-start">
-      {self && (
-        <div className="shrink-0 mx-auto sm:mx-0">
-          <div className="w-44 h-52 border-2 border-[#39ff14] bg-[#0a140a] flex items-center justify-center relative overflow-hidden neon-box">
-            <div className="absolute inset-0 grid-bg opacity-40" />
-            <span className="text-6xl relative z-10">☠</span>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/90 to-transparent p-3 text-center">
-              <p className="font-display text-sm neon-text">{self.username}</p>
-              <p
-                className={`text-[9px] mt-1 tracking-widest ${
-                  self.ready ? "text-[#39ff14]" : "text-[#ffaa00]"
-                }`}
-              >
-                {self.ready ? "● READY" : "○ STANDBY"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 flex-1 w-full">
-        {others.map((p, i) => (
-          <PixelAvatar
-            key={p.id}
-            name={p.username}
-            index={i}
-            isSelf={false}
-            ready={p.ready}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 auto-rows-fr content-start">
+      {slots.map((player, i) =>
+        player ? (
+          <SlotCard
+            key={player.id}
+            player={player}
+            isSelf={player.id === selfId}
           />
-        ))}
-        {others.length < 7 &&
-          Array.from({ length: 7 - others.length }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="aspect-square border border-dashed border-[#1a2a1a] opacity-25 flex items-center justify-center"
-            >
-              <span className="text-[#3a4a3a] text-lg">+</span>
-            </div>
-          ))}
-      </div>
+        ) : (
+          <EmptySlot key={`empty-${i}`} index={i} />
+        )
+      )}
     </div>
   );
 }

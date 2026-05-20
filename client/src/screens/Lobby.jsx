@@ -17,101 +17,137 @@ export function Lobby({ gameState, selfId, onReady, ready, onCopyCode }) {
   const needMore = count < minPlayers;
   const readyCount = gameState.players.filter((p) => p.ready).length;
   const readyPct = count > 0 ? Math.round((readyCount / count) * 100) : 0;
+  const allReady = !needMore && readyCount === count && count > 0;
 
   return (
-    <div className="h-full min-h-dvh flex grid-bg scanlines ambient-bg">
-      <Sidebar username={me?.username ?? "OPERATOR"} activeNav="survivors" />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar timer={timer} />
-        <main className="flex-1 p-4 sm:p-6 overflow-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
-            <div>
-              <p className="text-[10px] tracking-[0.4em] text-[#5a6a5a] mb-1">
-                WAITING FOR SURVIVORS
-              </p>
-              <p className="font-display text-2xl neon-text tracking-widest">
-                ROOM {gameState.code}
-              </p>
-            </div>
-            <div className="panel px-4 py-3 min-w-[200px]">
-              <div className="flex justify-between text-[10px] tracking-widest mb-2">
-                <span className="text-[#5a6a5a]">READY</span>
-                <span className="text-[#39ff14]">
-                  {readyCount}/{count}
-                </span>
-              </div>
-              <div className="progress-bar">
-                <div
-                  className="progress-bar__fill"
-                  style={{ width: `${readyPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
+    <div className="h-dvh max-h-dvh flex overflow-hidden grid-bg scanlines ambient-bg vignette">
+      <Sidebar
+        username={me?.username ?? "OPERATOR"}
+        avatarId={me?.avatar}
+        activeNav="survivors"
+      />
 
-          <AvatarGrid players={gameState.players} selfId={selfId} />
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <TopBar
+          timer={timer}
+          subtitle={`ARÈNE · ${count}/${minPlayers} min.`}
+        />
 
+        <main className="flex-1 flex flex-col gap-3 p-3 sm:p-4 min-h-0 overflow-hidden">
           {needMore && (
-            <div className="mt-6 panel border-[#ffaa00]/30 px-4 py-3 text-center">
-              <p className="text-[#ffaa00] text-xs tracking-widest">
-                Il faut au moins {minPlayers} joueurs — ouvre un 2ᵉ onglet et rejoins avec le
-                code{" "}
-                <span className="text-[#39ff14] font-display text-sm">
-                  {gameState.code}
+            <div className="shrink-0 panel border-[#ffaa00]/40 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="status-pill status-pill--warn shrink-0">
+                  <span className="status-dot status-dot--pulse" />
+                  EN ATTENTE
                 </span>
-              </p>
-            </div>
-          )}
-          {!needMore && readyCount < count && (
-            <p className="text-center text-[#5a6a5a] text-xs mt-6 tracking-widest">
-              En attente que tous les opérateurs soient READY
-            </p>
-          )}
-          {!needMore && readyCount === count && (
-            <p className="text-center text-[#39ff14] text-xs mt-6 tracking-widest pulse-neon">
-              Tous prêts — lancement imminent…
-            </p>
-          )}
-
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <div className="flex items-center gap-3 panel px-5 py-3">
-              <span className="text-[10px] text-[#5a6a5a] tracking-widest">CODE</span>
-              <span className="font-display text-xl neon-text tracking-[0.3em]">
-                {gameState.code}
-              </span>
+                <div>
+                  <p className="text-[#ffaa00] text-xs sm:text-sm tracking-wide font-display">
+                    Il faut au moins {minPlayers} opérateurs pour lancer
+                  </p>
+                  <p className="text-[10px] text-[#5a6a5a] mt-1">
+                    Ouvre un 2ᵉ onglet → Rejoindre avec le code ci-contre
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => onCopyCode?.(gameState.code)}
-                className="text-[10px] text-[#39ff14] border border-[#39ff14]/40 px-2 py-1 hover:bg-[rgba(57,255,20,0.1)]"
+                className="font-display text-2xl neon-text tracking-[0.25em] hover:opacity-80 text-left sm:text-right"
               >
-                COPIER
+                {gameState.code}
               </button>
             </div>
-            <NeonButton
-              onClick={() => onReady(!ready)}
-              variant={ready ? "secondary" : "primary"}
-              className="min-w-[220px] py-4"
-            >
-              {ready ? "STANDBY" : "READY UP"}
-            </NeonButton>
+          )}
+
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_minmax(260px,300px)] gap-3 min-h-0">
+            {/* Arène — grille 16 slots */}
+            <section className="panel corner-brackets flex flex-col min-h-0 overflow-hidden">
+              <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-[#1a2a1a]">
+                <div>
+                  <p className="text-[9px] tracking-[0.35em] text-[#5a6a5a]">
+                    WAITING FOR SURVIVORS
+                  </p>
+                  <p className="font-display text-lg sm:text-xl neon-text tracking-widest">
+                    ROOM {gameState.code}
+                  </p>
+                </div>
+                <span className="chip chip--active shrink-0">
+                  {count} / 16
+                </span>
+              </header>
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+                <AvatarGrid players={gameState.players} selfId={selfId} />
+              </div>
+            </section>
+
+            {/* Panneau action — toujours visible */}
+            <aside className="flex flex-col gap-3 min-h-0 shrink-0">
+              <div className="panel p-4 space-y-4">
+                <div>
+                  <p className="text-[9px] text-[#5a6a5a] tracking-widest mb-2">
+                    CODE D&apos;INVITATION
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-2xl neon-text tracking-[0.2em] flex-1">
+                      {gameState.code}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onCopyCode?.(gameState.code)}
+                      className="shrink-0 text-[10px] tracking-widest px-3 py-2 border border-[#39ff14]/50 text-[#39ff14] hover:bg-[rgba(57,255,20,0.1)] transition-colors"
+                    >
+                      COPIER
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] tracking-widest mb-2">
+                    <span className="text-[#5a6a5a]">PRÊTS</span>
+                    <span className="text-[#39ff14]">
+                      {readyCount} / {count}
+                    </span>
+                  </div>
+                  <div className="progress-bar h-1.5">
+                    <div
+                      className="progress-bar__fill h-full"
+                      style={{ width: `${readyPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                <NeonButton
+                  onClick={() => onReady(!ready)}
+                  variant={ready ? "secondary" : "primary"}
+                  className="w-full py-4 text-sm"
+                >
+                  {ready ? "ANNULER — STANDBY" : "READY UP"}
+                </NeonButton>
+
+                {allReady && (
+                  <p className="text-center text-[#39ff14] text-[10px] tracking-widest pulse-neon">
+                    Tous prêts — téléportation imminente
+                  </p>
+                )}
+                {!needMore && !allReady && (
+                  <p className="text-center text-[#5a6a5a] text-[10px] tracking-widest">
+                    En attente des autres opérateurs…
+                  </p>
+                )}
+              </div>
+
+              <div className="danger-box p-3 text-[10px] leading-relaxed">
+                <p className="text-[#ff2a2a] font-display text-xs tracking-widest mb-1">
+                  SECTOR_07 — ZONE RESTREINTE
+                </p>
+                <p className="text-[#5a6a5a]">
+                  Seuls les opérateurs READY seront envoyés dans l&apos;arène.
+                </p>
+              </div>
+            </aside>
           </div>
         </main>
-        <footer className="p-4 border-t border-[#1a2a1a]">
-          <div className="danger-box p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 rounded-sm">
-            <div>
-              <p className="text-[#ff2a2a] text-xs font-display tracking-widest">
-                RESTRICTED ZONE: SECTOR_07
-              </p>
-              <p className="text-[10px] text-[#5a6a5a] mt-1 max-w-xl leading-relaxed">
-                Radiation léthale détectée. Seuls les opérateurs prêts seront téléportés dans
-                l&apos;arène.
-              </p>
-            </div>
-            <span className="chip chip--active shrink-0">
-              {gameState.players.length} / 16 OPERATORS
-            </span>
-          </div>
-        </footer>
       </div>
     </div>
   );

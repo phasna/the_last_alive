@@ -46,7 +46,8 @@ export const MINIGAME_META = {
   fake_answer: {
     id: "fake_answer",
     name: "FAKE ANSWER",
-    description: "Invente un piège. Devine la vraie réponse parmi les leurres.",
+    description:
+      "Leaders au score : 1 piège par partie. Les autres devinent la vraie réponse.",
     icon: "🎭",
     baseTimer: 18,
   },

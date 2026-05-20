@@ -6,7 +6,8 @@ import { GlitchOverlay } from "../components/ui/GlitchOverlay";
 import { NeonButton } from "../components/ui/NeonButton";
 import { CombatFeed } from "../components/CombatFeed";
 import { EventBanner } from "../components/EventBanner";
-import { FakeAnswerPanel } from "../components/FakeAnswerPanel";
+import { FakeAnswerPanel, FakeAnswerWait } from "../components/FakeAnswerPanel";
+import { SurvivorsList } from "../components/SurvivorsList";
 
 const LABELS = ["A", "B", "C", "D"];
 
@@ -183,6 +184,15 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
   const isSudden = payload?.suddenDeath || payload?.type === "sudden_death";
   const isFake = payload?.type === "fake_answer";
   const isFakeVote = isFake && payload?.subPhase === "vote";
+  const canSubmitFake =
+    isFake &&
+    !isFakeVote &&
+    (gameState.fakeTrapEligibleIds?.includes(selfId) ||
+      payload?.eligibleTrapIds?.includes(selfId));
+  const eligibleTrapCount =
+    gameState.fakeTrapEligibleIds?.length ??
+    payload?.eligibleTrapIds?.length ??
+    0;
   const isBlackout = event?.id === "blackout";
   const eliminated = me?.eliminated;
 
@@ -190,18 +200,35 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
     return (
       <div className="h-full flex grid-bg scanlines relative">
         <CombatFeed feed={gameState.combatFeed} />
-        <div className="flex-1 flex items-center justify-center">
+        <Sidebar
+          username={me?.username}
+          avatarId={me?.avatar}
+          eliminated
+          activeNav="survivors"
+        />
+        <div className="flex-1 flex flex-col min-w-0 p-4 gap-4">
           <motion.div
-            className="text-center p-8 border border-[#ff2a2a] danger-box glitch-active"
-            initial={{ scale: 1.2, opacity: 0 }}
+            className="text-center p-6 border border-[#ff2a2a] danger-box glitch-active shrink-0"
+            initial={{ scale: 1.05, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
           >
-            <p className="font-display text-3xl text-[#ff2a2a] tracking-widest">
+            <p className="font-display text-2xl sm:text-3xl text-[#ff2a2a] tracking-widest">
               TERMINATED
             </p>
-            <p className="text-xs text-[#5a6a5a] mt-4">Mode spectateur</p>
-            <p className="neon-text mt-4 text-2xl">{gameState.survivorsCount} survivants</p>
+            <p className="text-xs text-[#ff2a2a] mt-2 tracking-widest">
+              VOUS ÊTES EN ROUGE — ÉLIMINÉ
+            </p>
+            <p className="text-[#5a6a5a] text-xs mt-3">
+              {gameState.survivorsCount} survivant
+              {gameState.survivorsCount !== 1 ? "s" : ""} restant
+              {gameState.survivorsCount !== 1 ? "s" : ""}
+            </p>
           </motion.div>
+          <SurvivorsList
+            players={gameState.players}
+            selfId={selfId}
+            compact
+          />
         </div>
       </div>
     );
@@ -218,15 +245,26 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
         intensity={pressure / 5}
       />
       <CombatFeed feed={gameState.combatFeed} />
-      <Sidebar username={me?.username} activeNav="survivors" />
+      <Sidebar
+        username={me?.username}
+        avatarId={me?.avatar}
+        eliminated={me?.eliminated}
+        activeNav="survivors"
+      />
       <div className="flex-1 flex flex-col relative min-w-0">
         <TopBar
           subtitle={`${gameState.currentMinigame?.name ?? ""}${me?.streak > 1 ? ` · STREAK x${me.streak}` : ""}`}
           survivors={gameState.survivorsCount}
           lives={me?.lives}
+          points={me?.points ?? 0}
         />
-        <main className="flex-1 flex p-6 gap-4 overflow-auto">
-          <div className="w-12 shrink-0 flex flex-col items-center border border-[#1a2a1a] p-2">
+        <main className="flex-1 flex p-4 sm:p-6 gap-3 sm:gap-4 overflow-auto min-h-0">
+          <SurvivorsList
+            players={gameState.players}
+            selfId={selfId}
+            compact
+          />
+          <div className="w-10 sm:w-12 shrink-0 flex flex-col items-center border border-[#1a2a1a] p-2">
             <span
               className="text-[8px] text-[#5a6a5a]"
               style={{ writingMode: "vertical-rl" }}
@@ -264,21 +302,30 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
 
             <div className="w-full max-w-2xl neon-box bg-[#08080a] p-8">
               {isFake && !isFakeVote ? (
-                <FakeAnswerPanel
-                  payload={payload}
-                  onSubmit={handleFakeSubmit}
-                  submitted={fakeSubmitted || answered}
-                  submittedCount={gameState.fakeSubmittedCount ?? 0}
-                  total={gameState.survivorsCount}
-                />
+                canSubmitFake ? (
+                  <FakeAnswerPanel
+                    payload={payload}
+                    onSubmit={handleFakeSubmit}
+                    submitted={fakeSubmitted || answered}
+                    submittedCount={gameState.fakeSubmittedCount ?? 0}
+                    eligibleCount={eligibleTrapCount}
+                  />
+                ) : (
+                  <FakeAnswerWait payload={payload} me={me} />
+                )
               ) : payload?.type === "memory_game" ? (
                 <MemoryGame payload={payload} onSubmit={onAnswer} disabled={answered} />
               ) : (
                 <>
                   {isFakeVote && (
-                    <p className="text-[#ffaa00] text-xs text-center mb-4 tracking-widest">
-                      🎭 Trouve la VRAIE réponse — évite les pièges !
-                    </p>
+                    <>
+                      <p className="text-[#ffaa00] text-xs text-center mb-2 tracking-widest">
+                        🎭 DEVINE LA VRAIE RÉPONSE — 1 seule est correcte
+                      </p>
+                      <p className="text-[10px] text-center text-[#5a6a5a] mb-6">
+                        {payload?.hint}
+                      </p>
+                    </>
                   )}
                   <p className="font-display text-lg text-center tracking-wide mb-8">
                     {payload?.question}
@@ -298,10 +345,17 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
                           key={i}
                           disabled={answered}
                           onClick={() => handleSelect(i)}
-                          className="text-left text-sm py-4"
+                          className={`text-left text-sm py-4 ${
+                            isFakeVote && payload?.trapLabels?.[i]
+                              ? "border-[#ffaa00]/50"
+                              : ""
+                          }`}
                         >
-                          <span className="text-[#5a6a5a] mr-2">
+                          <span className="text-[#5a6a5a] mr-2 block text-[10px]">
                             {LABELS[i]} //
+                            {isFakeVote && payload?.trapLabels?.[i] && (
+                              <span className="text-[#ffaa00] ml-1">?</span>
+                            )}
                           </span>
                           {opt}
                         </NeonButton>
@@ -310,7 +364,7 @@ export function Gameplay({ gameState, selfId, onAnswer, answered, onSound }) {
                   )}
                 </>
               )}
-              {(answered || fakeSubmitted) && !isFakeVote && (
+              {(answered || (fakeSubmitted && canSubmitFake)) && !isFakeVote && (
                 <p className="text-center text-[#39ff14] text-xs mt-6 tracking-widest">
                   SIGNAL LOCKED — EN ATTENTE…
                 </p>

@@ -1,3 +1,4 @@
+/** Questions ouvertes — uniquement pour le mode FAKE ANSWER (pas de QCM ici). */
 export const FAKE_ANSWER_PROMPTS = [
   {
     id: "fa1",
@@ -16,12 +17,27 @@ export const FAKE_ANSWER_PROMPTS = [
   },
   {
     id: "fa4",
-    question: "EN QUELLE ANNÉE A EU LIEU LA RÉVOLUTION FRANÇAISE ?",
+    question: "EN QUELLE ANNÉE A COMMENCÉ LA RÉVOLUTION FRANÇAISE ?",
     correctAnswer: "1789",
   },
   {
     id: "fa5",
     question: "QUEL MÉTAL EST LIQUIDE À TEMPÉRATURE AMBIANTE ?",
     correctAnswer: "MERCURE",
+  },
+  {
+    id: "fa6",
+    question: "QUEL EST LE PLUS LONG FLEUVE DU MONDE ?",
+    correctAnswer: "NIL",
+  },
+  {
+    id: "fa7",
+    question: "COMBIEN DE JOUEURS COMPOSE UNE ÉQUIPE DE FOOTBALL SUR LE TERRAIN ?",
+    correctAnswer: "11",
+  },
+  {
+    id: "fa8",
+    question: "QUEL EST L’ORGANE QUI POMPE LE SANG ?",
+    correctAnswer: "COEUR",
   },
 ];

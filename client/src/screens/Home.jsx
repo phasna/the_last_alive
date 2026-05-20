@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NeonButton } from "../components/ui/NeonButton";
+import { AvatarPicker } from "../components/AvatarPicker";
+import { PlayerAvatar } from "../components/PlayerAvatar";
 
 const FEATURES = [
   { icon: "♥", label: "3 vies" },
@@ -10,13 +12,20 @@ const FEATURES = [
 
 export function Home({ onCreate, onJoin, connected, connecting, error }) {
   const [username, setUsername] = useState("");
+  const [avatar, setAvatar] = useState(
+    () => localStorage.getItem("loa-avatar") || "skull"
+  );
   const [roomCode, setRoomCode] = useState("");
   const [mode, setMode] = useState("menu");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    localStorage.setItem("loa-avatar", avatar);
+  }, [avatar]);
+
   const profile = {
     username: username.trim() || "OPERATOR_01",
-    avatar: "default",
+    avatar,
   };
 
   const handleCreate = async () => {
@@ -54,11 +63,8 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
             SURVIVAL ARENA · MULTIPLAYER
           </p>
           <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6 mb-6">
-            <motion.div
-              className="w-20 h-20 shrink-0 border-2 border-[#39ff14] bg-[#0a140a] flex items-center justify-center text-4xl neon-box float"
-              aria-hidden
-            >
-              ☠
+            <motion.div className="float shrink-0" aria-hidden>
+              <PlayerAvatar avatarId={avatar} size="lg" highlight />
             </motion.div>
             <div>
               <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl neon-text title-flicker tracking-wider leading-tight">
@@ -109,8 +115,10 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="OPERATOR_01"
-            className="input-neon mb-6"
+            className="input-neon mb-4"
           />
+
+          <AvatarPicker value={avatar} onChange={setAvatar} />
 
           <AnimatePresence mode="wait">
             {mode === "menu" && (
