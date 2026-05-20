@@ -1,3 +1,4 @@
+import { isValidCategory } from "../data/categories.js";
 import {
   gameManager,
   socketRooms,
@@ -7,8 +8,9 @@ import {
 
 export function registerGameSockets(io) {
   io.on("connection", (socket) => {
-    socket.on("room:create", ({ username, avatar, isPublic }, cb) => {
-      const room = gameManager.createRoom(isPublic !== false);
+    socket.on("room:create", ({ username, avatar, isPublic, questionCategory }, cb) => {
+      const category = isValidCategory(questionCategory) ? questionCategory : "all";
+      const room = gameManager.createRoom(isPublic !== false, category);
       const result = room.addPlayer(socket.id, { username, avatar });
       if (result.error) {
         cb?.({ error: result.error });

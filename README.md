@@ -79,20 +79,68 @@ Le terminal affiche une adresse du type :
 - Pression qui monte : timer plus court, effets plus agressifs  
 - Éliminé → mode spectateur  
 
+## Base de données (MySQL)
+
+Les **questions**, **catégories**, **séquences mémoire** et **prompts Fake Answer** sont dans **MySQL**.
+
+### Configuration
+
+1. Démarre MySQL (MAMP, XAMPP, Docker, MySQL local…).
+2. Copie la config :
+
+```bash
+cp server/.env.example server/.env
+```
+
+3. Édite `server/.env` (utilisateur, mot de passe, nom de base) :
+
+```env
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=ton_mot_de_passe
+MYSQL_DATABASE=last_one_alive
+```
+
+4. Lance le projet — la base et les tables sont créées automatiquement, puis les 323 questions sont importées au premier démarrage.
+
+**Voir les données :** phpMyAdmin, MySQL Workbench, DBeaver, ou :
+
+```bash
+npm run db:status
+```
+
+Avec le serveur : [http://localhost:3001/api/database](http://localhost:3001/api/database)
+
+Schéma SQL manuel : `server/sql/schema.sql`
+
+| Table | Contenu |
+|-------|---------|
+| `categories` | Catégories du lobby |
+| `quiz_questions` | QCM + `category_id` |
+| `memory_sequences` | Memory game |
+| `fake_answer_prompts` | Mode piège |
+
+**API :** `/api/categories` · `/api/questions?category=geo` · `/api/health` · `/api/database`
+
 ## Structure du projet
 
 ```
 ├── client/          # React + Vite + Tailwind + Framer Motion
 │   └── src/
-└── server/          # Express + Socket.io
+└── server/          # Express + Socket.io + MySQL
+    ├── sql/         # schema.sql
+    ├── .env         # config MySQL (non versionné)
     └── src/
-        ├── app.js           # App Express
-        ├── index.js         # Point d’entrée HTTP
-        ├── routes/          # Routes REST /api/*
-        ├── controllers/     # Logique HTTP
-        ├── socket/          # Événements temps réel
-        ├── services/        # GameManager partagé
-        └── game/            # Room, mini-jeux
+        ├── app.js
+        ├── index.js
+        ├── db/              # MySQL, seed, cache
+        ├── repositories/    # Accès données
+        ├── routes/
+        ├── controllers/
+        ├── socket/
+        ├── services/
+        └── game/
 ```
 
 ## Variables d’environnement (optionnel)
@@ -101,8 +149,13 @@ Le terminal affiche une adresse du type :
 # client/.env
 VITE_SOCKET_URL=http://localhost:3001
 
-# server
+# server/.env
 PORT=3001
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=
+MYSQL_DATABASE=last_one_alive
 ```
 
 ## Prochaines étapes possibles

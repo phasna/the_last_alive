@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NeonButton } from "../components/ui/NeonButton";
 import { AvatarPicker } from "../components/AvatarPicker";
+import { CategoryPicker } from "../components/CategoryPicker";
 import { PlayerAvatar } from "../components/PlayerAvatar";
+import { QUESTION_CATEGORIES } from "../data/categories.js";
 
 const FEATURES = [
   { icon: "♥", label: "3 vies" },
@@ -18,6 +20,18 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
   const [roomCode, setRoomCode] = useState("");
   const [mode, setMode] = useState("menu");
   const [loading, setLoading] = useState(false);
+  const [questionCategory, setQuestionCategory] = useState("all");
+  const [categories, setCategories] = useState(QUESTION_CATEGORIES);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    fetch("/api/categories")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.categories?.length) setCategories(data.categories);
+      })
+      .catch(() => {});
+  }, [mode]);
 
   useEffect(() => {
     localStorage.setItem("loa-avatar", avatar);
@@ -30,7 +44,7 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
 
   const handleCreate = async () => {
     setLoading(true);
-    await onCreate({ ...profile, isPublic: true });
+    await onCreate({ ...profile, isPublic: true, questionCategory });
     setLoading(false);
   };
 
@@ -156,8 +170,14 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
                 exit={{ opacity: 0, x: -8 }}
               >
                 <p className="text-[10px] text-[#5a6a5a] tracking-widest text-center mb-1">
-                  Création d&apos;une room publique
+                  Création d&apos;une room publique — choisis la catégorie
                 </p>
+                <CategoryPicker
+                  categories={categories}
+                  value={questionCategory}
+                  onChange={setQuestionCategory}
+                  disabled={loading || !connected}
+                />
                 <NeonButton
                   disabled={loading || !connected}
                   onClick={handleCreate}
@@ -191,7 +211,7 @@ export function Home({ onCreate, onJoin, connected, connecting, error }) {
                   maxLength={6}
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  placeholder="ABC123"
+                  placeholder="NODE42"
                   className="input-neon text-center tracking-[0.4em] text-lg font-display"
                 />
                 <NeonButton

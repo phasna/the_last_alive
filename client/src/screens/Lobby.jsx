@@ -18,6 +18,7 @@ export function Lobby({ gameState, selfId, onReady, ready, onCopyCode }) {
   const readyCount = gameState.players.filter((p) => p.ready).length;
   const readyPct = count > 0 ? Math.round((readyCount / count) * 100) : 0;
   const allReady = !needMore && readyCount === count && count > 0;
+  const catMeta = gameState.questionCategoryMeta;
 
   return (
     <div className="h-dvh max-h-dvh flex overflow-hidden grid-bg scanlines ambient-bg vignette">
@@ -46,7 +47,7 @@ export function Lobby({ gameState, selfId, onReady, ready, onCopyCode }) {
                     Il faut au moins {minPlayers} opérateurs pour lancer
                   </p>
                   <p className="text-[10px] text-[#5a6a5a] mt-1">
-                    Ouvre un 2ᵉ onglet → Rejoindre avec le code ci-contre
+                    Ouvre un 2ᵉ onglet → Rejoindre avec le code dev ci-contre
                   </p>
                 </div>
               </div>
@@ -72,9 +73,14 @@ export function Lobby({ gameState, selfId, onReady, ready, onCopyCode }) {
                     ROOM {gameState.code}
                   </p>
                 </div>
-                <span className="chip chip--active shrink-0">
-                  {count} / 16
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {catMeta && (
+                    <span className="chip chip--active text-[9px]">
+                      {catMeta.icon} {catMeta.label}
+                    </span>
+                  )}
+                  <span className="chip text-[9px]">{count} / 16</span>
+                </div>
               </header>
               <div className="flex-1 overflow-y-auto p-3 sm:p-4">
                 <AvatarGrid players={gameState.players} selfId={selfId} />
@@ -84,9 +90,23 @@ export function Lobby({ gameState, selfId, onReady, ready, onCopyCode }) {
             {/* Panneau action — toujours visible */}
             <aside className="flex flex-col gap-3 min-h-0 shrink-0">
               <div className="panel p-4 space-y-4">
+                {catMeta && (
+                  <div className="pb-3 border-b border-[#1a2a1a]">
+                    <p className="text-[9px] text-[#5a6a5a] tracking-widest mb-1">
+                      CATÉGORIE (choix de l&apos;hôte)
+                    </p>
+                    <p className="font-display text-sm neon-text tracking-widest">
+                      {catMeta.icon} {catMeta.label}
+                    </p>
+                    <p className="text-[9px] text-[#5a6a5a] mt-0.5">
+                      {catMeta.description}
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-[9px] text-[#5a6a5a] tracking-widest mb-2">
-                    CODE D&apos;INVITATION
+                    CODE DEV (ex. NODE42, REACT7, VITE01)
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="font-display text-2xl neon-text tracking-[0.2em] flex-1">

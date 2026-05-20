@@ -53,8 +53,24 @@ export const MINIGAME_META = {
   },
 };
 
-export function pickRandomMinigame(exclude = []) {
-  const pool = MINIGAME_TYPES.filter((t) => !exclude.includes(t));
-  const list = pool.length > 0 ? pool : MINIGAME_TYPES;
-  return list[Math.floor(Math.random() * list.length)];
+/**
+ * @param {string[]} exclude — mini-jeux déjà joués récemment
+ * @param {number} roundNumber — manches déjà terminées (0 = toute première manche)
+ */
+export function pickRandomMinigame(exclude = [], roundNumber = 0) {
+  const earlyRoundBan =
+    roundNumber < 1 ? ["fake_answer", "sudden_death"] : roundNumber < 2 ? ["sudden_death"] : [];
+
+  const banned = new Set([...exclude, ...earlyRoundBan]);
+  let pool = MINIGAME_TYPES.filter((t) => !banned.has(t));
+
+  if (pool.length === 0) {
+    pool = MINIGAME_TYPES.filter((t) => !exclude.includes(t));
+  }
+  if (pool.length === 0) {
+    pool = [...MINIGAME_TYPES];
+  }
+
+  const index = Math.floor(Math.random() * pool.length);
+  return pool[index];
 }

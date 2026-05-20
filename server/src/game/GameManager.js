@@ -5,12 +5,12 @@ export class GameManager {
     this.rooms = new Map();
   }
 
-  createRoom(isPublic = true) {
+  createRoom(isPublic = true, questionCategory = "all") {
     let code = generateRoomCode();
     while (this.rooms.has(code)) {
       code = generateRoomCode();
     }
-    const room = new Room(code, isPublic);
+    const room = new Room(code, isPublic, questionCategory);
     this.rooms.set(code, room);
     return room;
   }

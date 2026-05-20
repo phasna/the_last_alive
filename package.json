@@ -12,7 +12,9 @@
     "dev:client:host": "npm run dev:host --prefix client",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "build": "npm run build --prefix client",
-    "start": "npm run start --prefix server"
+    "start": "npm run start --prefix server",
+    "db:seed": "npm run db:seed --prefix server",
+    "db:status": "npm run db:status --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

@@ -1,5 +1,8 @@
-import { QUIZ_QUESTIONS, MEMORY_SEQUENCES } from "../data/questions.js";
-import { FAKE_ANSWER_PROMPTS } from "../data/fakeAnswerPrompts.js";
+import { getQuestionsForCategory } from "../services/questionPool.service.js";
+import { getCategoryMeta } from "../repositories/category.repository.js";
+import { getRandomMemorySequence } from "../repositories/memory.repository.js";
+import { pickFakeAnswerPrompt } from "../repositories/fakeAnswer.repository.js";
+import { generateCodingRoomCode } from "../data/roomCodes.js";
 import {
   MINIGAME_META,
   pickRandomMinigame,
@@ -18,9 +21,10 @@ const FAKE_SUBMIT_SEC = 12;
 const FAKE_VOTE_SEC = 14;
 
 export class Room {
-  constructor(code, isPublic = true) {
+  constructor(code, isPublic = true, questionCategory = "all") {
     this.code = code;
     this.isPublic = isPublic;
+    this.questionCategory = questionCategory;
     this.phase = "lobby";
     this.players = new Map();
     this.spectators = new Set();
@@ -154,7 +158,10 @@ export class Room {
 
   beginSelection(io, broadcast) {
     this.phase = "selecting";
-    this.currentMinigame = pickRandomMinigame(this.lastMinigames.slice(-2));
+    this.currentMinigame = pickRandomMinigame(
+      this.lastMinigames.slice(-2),
+      this.roundNumber
+    );
     this.lastMinigames.push(this.currentMinigame);
     broadcast(this);
 
@@ -213,8 +220,7 @@ export class Room {
     const type = this.currentMinigame;
 
     if (type === "memory_game") {
-      const seq =
-        MEMORY_SEQUENCES[Math.floor(Math.random() * MEMORY_SEQUENCES.length)];
+      const seq = getRandomMemorySequence();
       return {
         type,
         displayMs: 3000 - this.pressureLevel * 200,
@@ -224,14 +230,7 @@ export class Room {
     }
 
     if (type === "fake_answer") {
-      let prompt = FAKE_ANSWER_PROMPTS.find((p) => !this.usedFakePrompts.has(p.id));
-      if (!prompt) {
-        this.usedFakePrompts.clear();
-        prompt =
-          FAKE_ANSWER_PROMPTS[
-            Math.floor(Math.random() * FAKE_ANSWER_PROMPTS.length)
-          ];
-      }
+      const prompt = pickFakeAnswerPrompt(this.usedFakePrompts);
       this.usedFakePrompts.add(prompt.id);
       const eligible = this.getEligibleFakeTrappers();
 
@@ -247,10 +246,11 @@ export class Room {
       };
     }
 
-    let question = QUIZ_QUESTIONS.find((q) => !this.usedQuestions.has(q.id));
+    const pool = getQuestionsForCategory(this.questionCategory);
+    let question = pool.find((q) => !this.usedQuestions.has(q.id));
     if (!question) {
       this.usedQuestions.clear();
-      question = QUIZ_QUESTIONS[Math.floor(Math.random() * QUIZ_QUESTIONS.length)];
+      question = pool[Math.floor(Math.random() * pool.length)];
     }
     this.usedQuestions.add(question.id);
 
@@ -495,7 +495,10 @@ export class Room {
 
     setTimeout(() => {
       this.phase = "selecting";
-      this.currentMinigame = pickRandomMinigame(this.lastMinigames.slice(-2));
+      this.currentMinigame = pickRandomMinigame(
+        this.lastMinigames.slice(-2),
+        this.roundNumber
+      );
       this.lastMinigames.push(this.currentMinigame);
       broadcast(this);
       setTimeout(() => {
@@ -548,6 +551,8 @@ export class Room {
     return {
       code: this.code,
       isPublic: this.isPublic,
+      questionCategory: this.questionCategory,
+      questionCategoryMeta: getCategoryMeta(this.questionCategory),
       phase: this.phase,
       roundNumber: this.roundNumber,
       pressureLevel: this.pressureLevel,
@@ -608,10 +613,5 @@ export class Room {
 }
 
 export function generateRoomCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+  return generateCodingRoomCode();
 }
