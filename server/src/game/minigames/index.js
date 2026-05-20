@@ -4,6 +4,7 @@ export const MINIGAME_TYPES = [
   "chaos_round",
   "sudden_death",
   "memory_game",
+  "fake_answer",
 ];
 
 export const MINIGAME_META = {
@@ -41,6 +42,13 @@ export const MINIGAME_META = {
     description: "Mémorise la séquence de symboles.",
     icon: "🧩",
     baseTimer: 14,
+  },
+  fake_answer: {
+    id: "fake_answer",
+    name: "FAKE ANSWER",
+    description: "Invente un piège. Devine la vraie réponse parmi les leurres.",
+    icon: "🎭",
+    baseTimer: 18,
   },
 };
 

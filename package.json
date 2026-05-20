@@ -5,8 +5,11 @@
   "description": "Last One Alive — multijoueur survival arena",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:host": "concurrently \"npm run dev:host --prefix server\" \"npm run dev:host --prefix client\"",
     "dev:server": "npm run dev --prefix server",
+    "dev:server:host": "npm run dev:host --prefix server",
     "dev:client": "npm run dev --prefix client",
+    "dev:client:host": "npm run dev:host --prefix client",
     "install:all": "npm install && npm install --prefix server && npm install --prefix client",
     "build": "npm run build --prefix client",
     "start": "npm run start --prefix server"

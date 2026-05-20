@@ -3,17 +3,26 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import { GameManager } from "./game/GameManager.js";
+import { printServerUrls, printHostInstructions } from "./network.js";
 
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || "0.0.0.0";
 const app = express();
 const httpServer = createServer(app);
-const isLocalOrigin = (origin) =>
-  !origin ||
-  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  return (
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+    /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
+      origin
+    )
+  );
+};
 
 const io = new Server(httpServer, {
   cors: {
-    origin: (origin, cb) => cb(null, isLocalOrigin(origin)),
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     methods: ["GET", "POST"],
   },
   pingInterval: 10000,
@@ -22,7 +31,7 @@ const io = new Server(httpServer, {
 
 app.use(
   cors({
-    origin: (origin, cb) => cb(null, isLocalOrigin(origin)),
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
   })
 );
 app.use(express.json());
@@ -92,11 +101,13 @@ io.on("connection", (socket) => {
     if (!room) return cb?.({ error: "Not in room" });
     const result = room.submitAnswer(socket.id, answer);
     if (result.error) return cb?.({ error: result.error });
-    if (result.resolved) {
+    if (result.resolved || result.phaseChange) {
       broadcastRoom(room);
     } else {
+      broadcastRoom(room);
       io.to(code).emit("game:answered", {
         answeredCount: room.roundAnswers.size,
+        fakeSubmittedCount: room.fakeAnswers.size,
         total: room.getAliveCount(),
       });
     }
@@ -121,6 +132,9 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`🎮 Last One Alive server → http://localhost:${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+  printServerUrls(PORT);
+  if (process.env.SHOW_HOST_HELP === "1") {
+    printHostInstructions(5173);
+  }
 });

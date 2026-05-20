@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node src/index.js",
+    "dev:host": "SHOW_HOST_HELP=1 node src/index.js",
     "dev:watch": "node --watch src/index.js",
     "start": "node src/index.js"
   },

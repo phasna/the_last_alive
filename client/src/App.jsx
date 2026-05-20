@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSocket } from "./hooks/useSocket";
+import { useSound } from "./hooks/useSound";
 import { Home } from "./screens/Home";
 import { Lobby } from "./screens/Lobby";
 import { Selector } from "./screens/Selector";
@@ -19,8 +20,10 @@ export default function App() {
     leaveRoom,
     socket,
   } = useSocket();
+  const { play: playSound } = useSound();
 
   const [selfId, setSelfId] = useState(null);
+  const prevFeedRef = useRef(null);
   const [ready, setReadyLocal] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [joinError, setJoinError] = useState(null);
@@ -42,7 +45,18 @@ export default function App() {
     if (gameState?.phase === "lobby") {
       setReadyLocal(false);
     }
-  }, [gameState?.phase, gameState?.roundNumber]);
+    if (gameState?.phase === "game_over") {
+      playSound("win");
+    }
+  }, [gameState?.phase, gameState?.roundNumber, gameState?.roundPayload?.subPhase, gameState?.roundEndsAt]);
+
+  useEffect(() => {
+    const feed = gameState?.combatFeed?.[0];
+    if (!feed || feed.at === prevFeedRef.current) return;
+    prevFeedRef.current = feed.at;
+    if (feed.type === "elimination") playSound("eliminate");
+    else if (feed.type === "damage") playSound("damage");
+  }, [gameState?.combatFeed, playSound]);
 
   const handleCreate = async (profile) => {
     setJoinError(null);
@@ -60,7 +74,13 @@ export default function App() {
 
   const handleReady = async (r) => {
     setReadyLocal(r);
+    if (r) playSound("ready");
     await setReady(r);
+  };
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard?.writeText(code);
+    playSound("select");
   };
 
   const handleAnswer = async (answer) => {
@@ -96,6 +116,7 @@ export default function App() {
         selfId={selfId}
         ready={ready}
         onReady={handleReady}
+        onCopyCode={handleCopyCode}
       />
     );
   }
@@ -111,6 +132,7 @@ export default function App() {
         selfId={selfId}
         onAnswer={handleAnswer}
         answered={answered}
+        onSound={playSound}
       />
     );
   }
