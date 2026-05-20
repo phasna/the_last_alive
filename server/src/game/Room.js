@@ -5,7 +5,7 @@ import {
 } from "./minigames/index.js";
 
 const INITIAL_LIVES = 3;
-const MIN_PLAYERS = 2;
+const MIN_PLAYERS = Number(process.env.MIN_PLAYERS) || 2;
 const MAX_PLAYERS = 16;
 const LOBBY_COUNTDOWN_SEC = 30;
 
@@ -97,6 +97,7 @@ export class Room {
           this.beginSelection(io, onTick);
         } else {
           this.lobbyCountdown = LOBBY_COUNTDOWN_SEC;
+          this.startLobbyCountdown(io, onTick);
         }
       }
     }, 1000);
@@ -318,6 +319,7 @@ export class Room {
       roundPayload: this.sanitizePayload(this.roundPayload),
       roundEndsAt: this.roundEndsAt,
       survivorsCount: this.getAliveCount(),
+      minPlayers: MIN_PLAYERS,
       players: [...this.players.values()].map((p) => this.sanitizePlayer(p)),
       winner: this.winner,
       answeredCount: this.roundAnswers.size,

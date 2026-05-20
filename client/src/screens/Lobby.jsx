@@ -12,6 +12,10 @@ function formatTimer(sec) {
 export function Lobby({ gameState, selfId, onReady, ready }) {
   const me = gameState.players.find((p) => p.id === selfId);
   const timer = formatTimer(gameState.lobbyCountdown ?? 0);
+  const minPlayers = gameState.minPlayers ?? 2;
+  const count = gameState.players.length;
+  const needMore = count < minPlayers;
+  const readyCount = gameState.players.filter((p) => p.ready).length;
 
   return (
     <div className="h-full flex grid-bg scanlines">
@@ -23,7 +27,32 @@ export function Lobby({ gameState, selfId, onReady, ready }) {
             WAITING FOR SURVIVORS… · ROOM {gameState.code}
           </p>
           <AvatarGrid players={gameState.players} selfId={selfId} />
-          <div className="mt-8 flex justify-center">
+
+          {needMore && (
+            <p className="text-center text-[#ffaa00] text-xs mt-6 tracking-widest">
+              Il faut au moins {minPlayers} joueurs pour lancer la partie — ouvre un 2ᵉ
+              onglet et rejoins avec le code{" "}
+              <span className="text-[#39ff14] font-display">{gameState.code}</span>
+            </p>
+          )}
+          {!needMore && readyCount < count && (
+            <p className="text-center text-[#5a6a5a] text-xs mt-6 tracking-widest">
+              En attente que tous les opérateurs soient READY ({readyCount}/{count})
+            </p>
+          )}
+          {!needMore && readyCount === count && (
+            <p className="text-center text-[#39ff14] text-xs mt-6 tracking-widest pulse-neon">
+              Tous prêts — lancement imminent…
+            </p>
+          )}
+
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <p className="text-[10px] text-[#5a6a5a]">
+              Code room :{" "}
+              <span className="text-[#39ff14] font-display tracking-widest">
+                {gameState.code}
+              </span>
+            </p>
             <NeonButton onClick={() => onReady(!ready)} className="min-w-[200px]">
               {ready ? "STANDBY" : "READY UP"}
             </NeonButton>
