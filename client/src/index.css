@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Orbitron", sans-serif;
+  --font-mono: "Share Tech Mono", monospace;
+  --color-neon: #39ff14;
+  --color-neon-dim: #2bcc10;
+  --color-danger: #ff2a2a;
+  --color-panel: #0a0a0c;
+  --color-panel-border: #1a2a1a;
+  --color-muted: #5a6a5a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: #050506;
+  color: #c8e6c8;
+  overflow: hidden;
+}
+
+.scanlines::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  opacity: 0.4;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(57, 255, 20, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 255, 20, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.neon-text {
+  color: var(--color-neon);
+  text-shadow:
+    0 0 10px rgba(57, 255, 20, 0.8),
+    0 0 20px rgba(57, 255, 20, 0.4);
+}
+
+.neon-box {
+  border: 1px solid var(--color-neon);
+  box-shadow:
+    0 0 10px rgba(57, 255, 20, 0.3),
+    inset 0 0 20px rgba(57, 255, 20, 0.05);
+}
+
+.neon-btn {
+  border: 2px solid var(--color-neon);
+  background: rgba(57, 255, 20, 0.08);
+  color: var(--color-neon);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.neon-btn:hover:not(:disabled) {
+  background: rgba(57, 255, 20, 0.2);
+  box-shadow: 0 0 25px rgba(57, 255, 20, 0.5);
+}
+
+.neon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.danger-box {
+  border: 1px solid var(--color-danger);
+  background: rgba(255, 42, 42, 0.08);
+  box-shadow: 0 0 15px rgba(255, 42, 42, 0.2);
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(3px, -2px); }
+  60% { transform: translate(-2px, -1px); }
+  80% { transform: translate(2px, 1px); }
+  100% { transform: translate(0); }
+}
+
+.glitch-active {
+  animation: glitch 0.15s infinite;
+}
+
+@keyframes pulse-neon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.pulse-neon {
+  animation: pulse-neon 1s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
